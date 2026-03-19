@@ -1,0 +1,39 @@
+;;; -*- mode: lisp -*-
+;;;; Type declarations for cl-batis
+;;;;
+;;;; Description:    SQL mapping framework for Common Lisp, inspired by MyBatis
+;;;;
+;;;; Original Repository: https://github.com/tamurashingo/cl-batis
+;;;; Original License:    MIT
+;;;;
+;;;; Declared by:    tamurashingo
+;;;;
+;;;; Notes:
+;;;; - select and update are annotations (cl-annot macros), not regular functions
+;;;; - defsql, sql-cond, with-transaction are macros
+;;;; - Deprecated symbols are included for completeness
+
+(in-package #:batis)
+
+;;; --- Functions ---
+
+(defun [parse :list] ([sql :string] [params ((:list (:t)) :null)]))
+(defun [sql-where :string] (&rest [conditions :t]))
+(defun [sql-set :string] (&rest [columns :t]))
+
+;;; --- Generic Functions ---
+
+(defun [gen-sql-and-params :t] ([sql-name :t] [params ((:list (:t)) :null)]))
+(defun [do-sql :t] ([session :t] [sql :string] &optional [params :list]))
+
+;;; --- Generic Functions (deprecated) ---
+
+(defun [select-one :t] ([session :t] [sql-name :t] &rest [params :t]))
+(defun [select-list :list] ([session :t] [sql-name :t] &rest [params :t]))
+(defun [update-one :t] ([session :t] [sql-name :t] &rest [params :t]))
+(defun [create-sql-session :t] ([connection :t] &rest [params :t]))
+(defun [commit :t] ([session :t]))
+(defun [rollback :t] ([session :t]))
+(defun [close-sql-session :t] ([session :t]))
+
+;;; vim: set filetype=lisp :

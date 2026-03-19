@@ -1,0 +1,42 @@
+name: Bug Report
+description: Report an issue with an existing declaration file
+labels: ["bug"]
+body:
+  - type: input
+    id: package-name
+    attributes:
+      label: Package Name
+      description: The name of the package where the issue occurs (e.g., `common-lisp`, `cl-ppcre`)
+      placeholder: e.g. common-lisp
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the issue in detail. Include the specific declaration that is incorrect or missing.
+      placeholder: |
+        e.g. `floor` is declared as returning `:integer`, but it actually returns `(:values :integer :number)`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Result
+      description: What the correct declaration or behavior should be.
+      placeholder: |
+        e.g. `(defun [floor (:values :integer :number)] ([number :number] &optional [divisor :number]))`
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Result
+      description: What the current declaration or behavior is.
+      placeholder: |
+        e.g. `(defun [floor :integer] ([number :number] &optional [divisor :number]))`
+    validations:
+      required: true

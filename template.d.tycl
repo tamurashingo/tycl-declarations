@@ -1,0 +1,18 @@
+;;; -*- mode: lisp -*-
+;;;; Type declarations for <LIBRARY-NAME>
+;;;;
+;;;; Description:    <brief description of the library>
+;;;;
+;;;; Original Repository: <URL of the original library's repository>
+;;;; Original License:    <license of the original library>
+;;;;
+;;;; Declared by:    <author of this declaration file>
+;;;;
+;;;; Notes:
+;;;; - <any notes about the declarations>
+
+(in-package #:<PACKAGE-NAME>)
+
+;;; Add type declarations here
+
+;;; vim: set filetype=lisp :
