@@ -1,0 +1,18 @@
+;;; -*- mode: lisp -*-
+;;;; Type declarations for cl-dbi-connection-pool
+;;;;
+;;;; Description:    <brief description of the library>
+;;;;
+;;;; Original Repository: <URL of the original library's repository>
+;;;; Original License:    <license of the original library>
+;;;;
+;;;; Declared by:    <author of this declaration file>
+;;;;
+;;;; Notes:
+;;;; - <any notes about the declarations>
+
+(in-package #:cl-dbi-connection-pool)
+
+;;; Add type declarations here
+
+;;; vim: set filetype=lisp :
