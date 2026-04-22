@@ -1,0 +1,66 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+
+;;;; add-version.ros
+;;;; Add a new version to an existing library in tycl-declarations.
+;;;;
+;;;; Usage: ros roswell/add-version.ros <package-name> <version>
+;;;;
+;;;; Updates meta.sexp (:latest and :versions) and creates a new versioned
+;;;; declaration file by copying the current unversioned file.
+
+(defun main (&rest argv)
+  (when (< (length argv) 2)
+    (format *error-output* "Usage: add-version <package-name> <version>~%")
+    (ros:quit 1))
+  (let* ((package-name (first argv))
+         (version (second argv))
+         (script-dir (make-pathname :directory (pathname-directory *load-pathname*)))
+         (base-dir (merge-pathnames (make-pathname :directory '(:relative :up)) script-dir))
+         (pkg-dir (merge-pathnames
+                   (make-pathname :directory `(:relative "packages" ,package-name))
+                   base-dir))
+         (meta-path (merge-pathnames "meta.sexp" pkg-dir))
+         (unversioned-path (merge-pathnames
+                            (format nil "~A.d.tycl" package-name)
+                            pkg-dir))
+         (versioned-path (merge-pathnames
+                          (format nil "~A-~A.d.tycl" package-name version)
+                          pkg-dir)))
+    ;; Check if package exists (by unversioned file)
+    (unless (probe-file unversioned-path)
+      (format *error-output* "Error: Package '~A' not found.~%" package-name)
+      (format *error-output* "Use add-package to create a new package first.~%")
+      (ros:quit 1))
+    ;; Read existing meta.sexp or start fresh
+    (let* ((has-meta (probe-file meta-path))
+           (meta (when has-meta
+                   (with-open-file (in meta-path :direction :input)
+                     (read in))))
+           (versions (if meta (getf meta :versions) '())))
+      (when (member version versions :test #'string=)
+        (format *error-output* "Error: Version '~A' already exists for package '~A'.~%"
+                version package-name)
+        (ros:quit 1))
+      ;; Copy unversioned file as new versioned file
+      (let ((content (with-open-file (in unversioned-path :direction :input)
+                       (let ((s (make-string (file-length in))))
+                         (read-sequence s in)
+                         s))))
+        (with-open-file (out versioned-path :direction :output)
+          (write-string content out)))
+      ;; Write/update meta.sexp
+      (let ((new-versions (append versions (list version))))
+        (with-open-file (out meta-path :direction :output :if-exists :supersede)
+          (format out "(:package ~S~% :latest ~S~% :versions (~{~S~^ ~}))~%"
+                  package-name version new-versions)))
+      ;; Summary
+      (format t "Added version '~A' to package '~A'~%" version package-name)
+      (format t "  ~A: ~A~%" (if has-meta "Updated" "Created") meta-path)
+      (format t "  Created: ~A~%" versioned-path)
+      (format t "~%Edit ~A to update type definitions, then run:~%" unversioned-path)
+      (format t "  cp ~A ~A~%" (enough-namestring unversioned-path base-dir)
+              (enough-namestring versioned-path base-dir)))))

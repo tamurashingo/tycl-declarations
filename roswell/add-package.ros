@@ -1,0 +1,86 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+
+;;;; add-package.ros
+;;;; Add a new library to tycl-declarations.
+;;;;
+;;;; Usage: ros roswell/add-package.ros <package-name> [version]
+;;;;
+;;;; Without version:
+;;;;   packages/<package-name>/<package-name>.d.tycl        (unversioned only)
+;;;;
+;;;; With version:
+;;;;   packages/<package-name>/meta.sexp
+;;;;   packages/<package-name>/<package-name>.d.tycl        (unversioned, from template)
+;;;;   packages/<package-name>/<package-name>-<version>.d.tycl (versioned copy)
+
+(defun replace-all (string old new)
+  (with-output-to-string (out)
+    (let ((old-len (length old))
+          (start 0))
+      (loop for pos = (search old string :start2 start)
+            while pos
+            do (write-string string out :start start :end pos)
+               (write-string new out)
+               (setf start (+ pos old-len))
+            finally (write-string string out :start start)))))
+
+(defun main (&rest argv)
+  (when (< (length argv) 1)
+    (format *error-output* "Usage: add-package <package-name> [version]~%")
+    (ros:quit 1))
+  (let* ((package-name (first argv))
+         (version (second argv))
+         (script-dir (make-pathname :directory (pathname-directory *load-pathname*)))
+         (base-dir (merge-pathnames (make-pathname :directory '(:relative :up)) script-dir))
+         (pkg-dir (merge-pathnames
+                   (make-pathname :directory `(:relative "packages" ,package-name))
+                   base-dir))
+         (template-path (merge-pathnames "template.d.tycl" base-dir))
+         (unversioned-path (merge-pathnames
+                            (format nil "~A.d.tycl" package-name)
+                            pkg-dir)))
+    ;; Check if package already exists
+    (when (probe-file unversioned-path)
+      (format *error-output* "Error: Package '~A' already exists.~%" package-name)
+      (format *error-output* "Use add-version to add a new version to an existing package.~%")
+      (ros:quit 1))
+    ;; Check template exists
+    (unless (probe-file template-path)
+      (format *error-output* "Error: Template file not found: ~A~%" template-path)
+      (ros:quit 1))
+    ;; Create package directory
+    (ensure-directories-exist unversioned-path)
+    ;; Read template and replace placeholders
+    (let ((template (with-open-file (in template-path :direction :input)
+                      (let ((content (make-string (file-length in))))
+                        (read-sequence content in)
+                        content))))
+      (let ((content (replace-all
+                      (replace-all template "<LIBRARY-NAME>" package-name)
+                      "<PACKAGE-NAME>" package-name)))
+        ;; Write unversioned declaration file
+        (with-open-file (out unversioned-path :direction :output)
+          (write-string content out))
+        ;; Write versioned declaration file and meta.sexp if version specified
+        (when version
+          (let ((versioned-path (merge-pathnames
+                                 (format nil "~A-~A.d.tycl" package-name version)
+                                 pkg-dir))
+                (meta-path (merge-pathnames "meta.sexp" pkg-dir)))
+            (with-open-file (out versioned-path :direction :output)
+              (write-string content out))
+            (with-open-file (out meta-path :direction :output)
+              (format out "(:package ~S~% :latest ~S~% :versions (~S))~%"
+                      package-name version version))
+            (format t "Created package '~A' (version ~A)~%" package-name version)
+            (format t "  ~A~%" meta-path)
+            (format t "  ~A~%" unversioned-path)
+            (format t "  ~A~%" versioned-path)))
+        (unless version
+          (format t "Created package '~A' (unversioned)~%" package-name)
+          (format t "  ~A~%" unversioned-path))))
+    (format t "~%Edit the declaration file to add type definitions.~%")))
