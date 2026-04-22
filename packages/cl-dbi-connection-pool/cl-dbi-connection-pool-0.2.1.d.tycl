@@ -1,18 +1,103 @@
 ;;; -*- mode: lisp -*-
 ;;;; Type declarations for cl-dbi-connection-pool
 ;;;;
-;;;; Description:    <brief description of the library>
+;;;; Description:    Connection pool for CL-DBI
 ;;;;
-;;;; Original Repository: <URL of the original library's repository>
-;;;; Original License:    <license of the original library>
+;;;; Original Repository: https://github.com/tamurashingo/cl-dbi-connection-pool
+;;;; Original License:    MIT
 ;;;;
-;;;; Declared by:    <author of this declaration file>
+;;;; Declared by:    tamurashingo
 ;;;;
 ;;;; Notes:
-;;;; - <any notes about the declarations>
+;;;; - DBI types (execute, fetch, fetch-all, etc.) are re-exported from CL-DBI
 
 (in-package #:cl-dbi-connection-pool)
 
-;;; Add type declarations here
+;;; Classes
+
+(defclass <dbi-connection-pool> ()
+  (([pool :t] :initarg :pool)
+   ([connect-fn :function] :initarg :connect-fn)
+   ([driver-name :keyword] :initarg :driver-name :accessor driver-name)
+   ([max-allowed-packet (:integer :null)] :accessor max-allowed-packet)
+   ([checkout-timeout :integer] :initarg :checkout-timeout :accessor checkout-timeout)
+   ([initial-size :integer] :initarg :initial-size :accessor initial-size)
+   ([idle-timeout :integer] :initarg :idle-timeout :accessor idle-timeout)
+   ([max-lifetime (:integer :null)] :initarg :max-lifetime :accessor max-lifetime)
+   ([keepalive-interval :integer] :initarg :keepalive-interval :accessor keepalive-interval)
+   ([validation-query (:string :null)] :initarg :validation-query :accessor validation-query)
+   ([reaper-interval :integer] :initarg :reaper-interval :accessor reaper-interval)))
+
+(defclass <dbi-connection-proxy> ()
+  (([dbi-connection :t] :initarg :dbi-connection :accessor dbi-connection)
+   ([disconnect-fn :function] :initarg :disconnect-fn :accessor disconnect-fn)
+   ([connection-pool :t] :initarg :connection-pool :accessor connection-pool)))
+
+;;; Condition classes
+
+(defclass <dbi-cp-no-connection> ()
+  ())
+
+(defclass <dbi-cp-packet-size-exceeded> ()
+  (([query-size :integer] :initarg :query-size :reader query-size)
+   ([max-allowed :integer] :initarg :max-allowed :reader max-allowed)
+   ([query (:string :null)] :initarg :query :reader query)))
+
+;;; Connection pool management
+
+(defun [make-dbi-connection-pool <dbi-connection-pool>]
+    ([driver-name :keyword]
+     &rest [params :t]
+     &key [database-name :string] [username :string] [password :string]
+     [initial-size :integer] [max-size :integer]
+     [checkout-timeout :integer] [idle-timeout :integer]
+     [max-lifetime :integer] [keepalive-interval :integer]
+     [validation-query :string] [reaper-interval :integer]))
+
+(defun [shutdown :void] ([conn <dbi-connection-pool>]))
+
+(defun [get-connection <dbi-connection-proxy>] ([conn <dbi-connection-pool>]))
+
+;;; Proxy operations
+
+(defun [disconnect :void] ([conn <dbi-connection-proxy>]))
+
+(defun [prepare :t] ([conn <dbi-connection-proxy>] [sql :string]))
+
+(defun [do-sql :t] ([conn <dbi-connection-proxy>] [sql :string] &optional [params :list]))
+
+(defun [execute :t] ([query :t] &optional [params :list]))
+
+(defun [fetch :t] ([query :t]))
+
+(defun [fetch-all :list] ([query :t]))
+
+(defun [row-count :integer] ([conn <dbi-connection-proxy>]))
+
+;;; Transaction
+
+(defun [begin-transaction :void] ([conn <dbi-connection-proxy>]))
+
+(defun [commit :void] ([conn <dbi-connection-proxy>]))
+
+(defun [rollback :void] ([conn <dbi-connection-proxy>]))
+
+;;; Savepoints (re-exported from CL-DBI)
+
+(defun [savepoint :void] ([conn <dbi-connection-proxy>] [name :string]))
+
+(defun [rollback-savepoint :void] ([conn <dbi-connection-proxy>] [name :string]))
+
+(defun [release-savepoint :void] ([conn <dbi-connection-proxy>] [name :string]))
+
+;;; Utilities
+
+(defun [ping :boolean] ([conn <dbi-connection-proxy>]))
+
+(defun [get-max-allowed-packet (:integer :null)] ([conn <dbi-connection-proxy>]))
+
+(defun [check-packet-size :boolean] ([conn <dbi-connection-proxy>] [sql :string] &optional [params :list]))
+
+(defun [packet-size-exceeded-p :boolean] ([conn <dbi-connection-proxy>] [sql :string] &optional [params :list]))
 
 ;;; vim: set filetype=lisp :
